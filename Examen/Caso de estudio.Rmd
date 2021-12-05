@@ -1,0 +1,576 @@
+---
+title: "Caso de estudio"
+author: "Mauricio Roverssi Alvarado"
+date: "4/12/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(readr)
+library(ggplot2)
+library(ggpubr)
+library(caret)
+library(data.table)
+library(Hmisc)
+library(corrplot)
+library(PerformanceAnalytics)
+library(GGally)
+library(MASS)
+library(dplyr)
+library(readr)
+library(tidyverse)
+library(qwraps2)
+library(ggplot2)
+library(leaps)
+library(caret)
+library(glmnet)
+library(sgd)
+library(BLR)
+library(lars)
+library(GGally)
+library(scatterplot3d)
+library(lmtest)
+library(faraway)
+library(pROC)
+
+wine <- read_csv("G:/Unidades compartidas/Maestría en Inteligencia Analítica de Datos/Cursos/Modelos de análisis estadísticos/Examen/Datos/wine.csv")
+
+
+wine <- wine[complete.cases(wine),]
+wine$type <- as.factor(wine$type)
+wine$quality <- as.factor(wine$quality)
+
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+  )
+}
+
+
+#Summary by group
+red <- wine[wine$type=="red",]
+white <- wine[wine$type=="white",]
+
+#Sinf Factores
+wine_sin_f <- wine[, sapply(wine, class)=="numeric"]
+
+#Matriz de correlación 
+matriz_1 <- cor(wine_sin_f[-c(1)])
+
+
+```
+
+## 1. Describa las características de cada variantes de vino
+
+La base de datos obtenida en el archivo *wines.csv* contiene 6497 observaciones 13 variables listadas a continuación:
+
+| Variable             | Tipo de dato (rango)              |
+|----------------------|-----------------------------------|
+| fixed.acidity        | númerico (3.8 - 15.9)             |
+| volatile.acidity     | númerico (0.08 - 1.58)            |
+| citric.acid          | númerico (0.0 - 1.66)             |
+| residual.sugar       | númerico (0.6 - 65.8)             |
+| chlorides            | númerico (0.009 - 0.611)          |
+| free.sulfur.dioxide  | númerico (1 - 289)                |
+| total.sulfur.dioxide | númerico (6.0 - 440.0)            |
+| density              | númerico (0.9871 - 1.0390)        |
+| pH                   | númerico (2.720 - 4.010)          |
+| sulphates            | númerico (0.22 - 2)               |
+| alcohol              | númericio (8 - 14.90)             |
+| quality              | categorico (3 , 4, 5, 6, 7, 8, 9) |
+| type                 | categórico (red, white)           |
+
+A continuación gráficaremos cada una de la variables agrupadas por la variable *type*.
+
+### a. Gráficos 
+#### Ácidez fija
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=fixed.acidity, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary1}
+summary(red$fixed.acidity)
+summary(white$fixed.acidity)
+
+```
+
+
+#### Ácidez volátil
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=volatile.acidity, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary2}
+summary(red$volatile.acidity)
+summary(white$volatile.acidity)
+
+```
+
+#### Ácido cítrico
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=citric.acid, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary3}
+summary(red$citric.acid)
+summary(white$citric.acid)
+
+```
+
+
+#### Ázucar residual
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=residual.sugar, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary4}
+summary(red$residual.sugar)
+summary(white$residual.sugar)
+
+```
+
+#### Cloruros
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=chlorides, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary5}
+summary(red$chlorides)
+summary(white$chlorides)
+
+```
+
+#### Dióxido de azufre libre
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=free.sulfur.dioxide, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary6}
+summary(red$free.sulfur.dioxide)
+summary(white$free.sulfur.dioxide)
+
+```
+
+#### Dióxido de azufre total
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=total.sulfur.dioxide, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary7}
+summary(red$total.sulfur.dioxide)
+summary(white$total.sulfur.dioxide)
+
+```
+
+
+#### Densidad
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=density, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary8}
+summary(red$density)
+summary(white$density)
+
+```
+
+#### pH
+
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=pH, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary9}
+summary(red$pH)
+summary(white$pH)
+
+```
+
+#### Sulfatos
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=sulphates, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary10}
+summary(red$sulphates)
+summary(white$sulphates)
+
+```
+
+
+#### Alcohol
+
+```{r , echo=FALSE}
+ggplot(data=wine, aes(x=type, y=alcohol, fill=type))+
+  geom_boxplot(alpha=0.6)+
+  theme(legend.position = "null")+
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r summary11}
+summary(red$alcohol)
+summary(white$alcohol)
+
+```
+
+#### Calidad
+
+```{r , echo=FALSE}
+ggplot(wine, 
+          aes(x = quality, 
+              fill = type)) + 
+  geom_bar(position = position_dodge(preserve = "single"))
+
+```
+
+```{r summary12}
+summary(red$quality)
+summary(white$quality)
+
+```
+
+
+#### Vinos
+
+```{r , echo=FALSE}
+ggplot(wine, 
+       aes(x = type)) + 
+  geom_bar(position = position_dodge(preserve = "single"))+
+  scale_fill_brewer(palette = "Dark2")
+
+```
+
+```{r summary13}
+summary(wine$type)
+
+```
+
+### b. Analísis
+La _acidez fija_ y la _acidez volátil_ parecen ser en promedio más altas en los vinos rojos que en los blancos. No parece haber diferencias apreciables en el _ácido cítrico_. Los vinos rojos parecen tener menor concentración de _ázucar residgual_ que los vinos blancos. Esto tendría un impacto en el grado alcoholico. La presencia de _cloruros_ parece ser ligeramente más alta en los vinos rojos que en los blancos. El _dióxido de azufre libre_ y el _dióxido de azufre total_ parece ser más altos en los vinos blancos que en los rojos. Estas son dos medidas de la calidad de los vinos así como una tercer medida que es el _dióxido de azufre combinado_ que es el resultado de la resta de los dos anteriores. La _densidad_ parece ser ligramente más alta en los vinos rojos, lo mismo que el _ph_ y los _sulfatos_. No se aprecian diferencias entre el grado de _alcohol_ de entres los dos tipos de vinos. 
+
+Con respecto a la _calidad_ la mayoría de los vinos se encuentran entre las calidades 5 t 7. Y finalmente en los datos hay una prenominancia de vinos blancos sobre los tintos. 
+
+## 2. Determine las variables que influyen de manera significativa en el grado de alcohol del vino producido en las bodegas
+
+### a. Gráfico de correlación 
+
+```{r , echo=FALSE}
+corrplot(matriz_1, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+
+```
+
+El gráfico de correlación muestra que hay una fuerte correlación entre _densidad_ y las variables _azucar residual_ y _alcohol_. Entre _densidad_ y _azúcar residual_ la correlación es positiva mientras que _densidad_ y _alcohol_ es negativa. Esto se puede explicar dada la relación debido a que el alcohol se produce por en el proceso de fermentación a partir de los ázucares de la uva. A mayor concentración de _ázucares residuales_, menor el grado de _alcohol_ y por tanto la _densidad_ que es una medida de la cantidad de masa en un determinado volumen será mayor. Y por el contrario a menor _azúcar residual_ el grado de _alcohol_ tendería ser mayor, reduciendo la _densidad_ del vino. Esta relación es importante porque al ser la _densidad_ una medida de la cantidad de masa en un determinando volumen, siempre estará relacionada con la conecentración de _azúcar residual_ y _acohol_. 
+
+El gráfico también muestra una correlación positiva entre el _dióxido de azufre libre_ y el _dióxido de azufre total_. Esto es esperable dado que una incluye a la otra. 
+
+### b. Escogencia del modelo
+```{r setup2, include=FALSE}
+boxplot(wine$alcohol, plot=FALSE)$out
+outliers_a <-boxplot(wine$alcohol, plot=FALSE)$out
+wine<-wine[-which(wine$alcohol %in% outliers_a),]
+
+boxplot(wine$density, plot=FALSE)$out
+outliers_de <-boxplot(wine$density, plot=FALSE)$out
+wine<-wine[-which(wine$density %in% outliers_de),]
+
+boxplot(wine$citric.acid, plot=FALSE)$out
+outliers_ca <-boxplot(wine$citric.acid, plot=FALSE)$out
+wine<-wine[-which(wine$citric.acid %in% outliers_ca),]
+
+boxplot(wine$volatile.acidity, plot=FALSE)$out
+outliers_va <-boxplot(wine$volatile.acidity, plot=FALSE)$out
+wine<-wine[-which(wine$volatile.acidity %in% outliers_va),]
+
+boxplot(wine$free.sulfur.dioxide, plot=FALSE)$out
+outliers_fsd <-boxplot(wine$free.sulfur.dioxide, plot=FALSE)$out
+wine<-wine[-which(wine$free.sulfur.dioxide %in% outliers_fsd),]
+
+boxplot(wine$total.sulfur.dioxide, plot=FALSE)$out
+outliers_tsd <-boxplot(wine$total.sulfur.dioxide, plot=FALSE)$out
+wine<-wine[-which(wine$total.sulfur.dioxide %in% outliers_tsd),]
+
+boxplot(wine$residual.sugar, plot=FALSE)$out
+outliers_rs <-boxplot(wine$residual.sugar, plot=FALSE)$out
+wine<-wine[-which(wine$residual.sugar %in% outliers_rs),]
+
+boxplot(wine$fixed.acidity, plot=FALSE)$out
+outliers_fa <-boxplot(wine$fixed.acidity, plot=FALSE)$out
+wine<-wine[-which(wine$fixed.acidity %in% outliers_fa),]
+
+boxplot(wine$sulphates, plot=FALSE)$out
+outliers_s <-boxplot(wine$sulphates, plot=FALSE)$out
+wine<-wine[-which(wine$sulphates %in% outliers_s),]
+
+boxplot(wine$chlorides, plot=FALSE)$out
+outliers_c <-boxplot(wine$chlorides , plot=FALSE)$out
+wine<-wine[-which(wine$chlorides %in% outliers_c),]
+
+formula=alcohol ~ fixed.acidity+volatile.acidity+citric.acid+residual.sugar+
+  chlorides+free.sulfur.dioxide+total.sulfur.dioxide+density+
+  pH+sulphates+quality+type
+
+modelo0 <- lm(formula, data=wine)
+formula2= alcohol ~ fixed.acidity+volatile.acidity+citric.acid+residual.sugar+
+  chlorides+free.sulfur.dioxide+total.sulfur.dioxide+
+  pH+type
+
+formula3= alcohol  ~ volatile.acidity+citric.acid+residual.sugar+
+  chlorides+total.sulfur.dioxide
+modelo3 <- lm(formula3, data=wine)
+
+bx<-boxcox(modelo3)
+lambda<-bx$x[which.max(bx$y)]
+
+formula3= (((alcohol^lambda) - 1)/lambda)  ~ volatile.acidity+citric.acid+residual.sugar+
+  chlorides+total.sulfur.dioxide
+modelo3 <- lm(formula3, data=wine)
+modelo3
+summary(modelo3)
+```
+
+Para determinar que variables influyen de manera significativa en el grado de alcohol, primero se procedió a una limpieza de *outliers* reduciendo el set de datos a 4740 observaciones. Luego se procedió a construir un modelo incluyendo todas las variables, cuyo resultado se puede observar a continuación
+```{r summarymodelo0}
+summary(modelo0)
+
+```
+
+Cómo se puede observar, aunque hay algunas variables que no son significativas, el modelo parece ajustar bien para predicir el nivel del alcohol. Sin embargo, este modelo inlcuye la variable _densidad_ que como ya se explicó anteriormente el grado de _acohol_ tiene una relación causal con dicha medida: entre más alcohol menos densidad y viceversa. Debido a esta relación, se decide no incluir la densidad en el modelo, ya que se estaría incluyendo una variable que varía según la variable que de la cual queremos explicar su variación. Lo mismo pasaría con el pH.
+
+Para el modelo final se tomaron las siguientes decisiones: 
+1. Se eliminaron las variables no significativas utilizando el método de eliminación hacia atrás
+2. Se realizó un ajuste por medio de la técnica de Box-Cox debido a que se detectó que la varianza de los residuos no era homogenea
+
+A continuación el modelo resultante: 
+
+```{r summarymodelo3}
+summary(modelo3)
+
+```
+
+Por tanto la variación en el grado de alcohol estaría explicado en un 45% por las variables _acidez volatil_, _ácido citrico_ que aportan al modelo de forma positiva y _azúcar residual_, _cloruros_ y _dióxido de azufre total_ que aportan negativamente al modelo. 
+
+
+### c. Otros analísis 
+
+A continuación otros analísis y gráficos relacionados con el modelo escogido
+
+#### Grafico de predicción
+
+```{r , echo=FALSE}
+Pred <- predict(modelo3)
+plot(wine$alcohol,Pred,
+     xlab="Actual",ylab="Predicted")
+abline(a=0,b=1)
+```
+
+
+#### Gráficos de residuos
+
+#### Varianza constante
+
+```{r bptest}
+bptest(modelo3)
+```
+
+#### Normalidad
+
+```{r shapiro}
+residuos <- modelo3$residuals
+shapiro.test(residuos)
+```
+
+#### Independencia
+```{r dwtest}
+dwtest(modelo3)
+```
+
+#### No multicolinealidad
+
+```{r vif}
+vif(modelo3)
+```
+
+## 3. Un vino se considera exclusivo si su puntación de calidad es 9 o 10. ¿Cuáles de las características del vino producido en las bodegas aumentan la probabilidad de que sea considerado exclusivo?
+
+### Cambio en los párametros deseados por el cliente
+```{r setup3, include=FALSE}
+
+wine <- read_csv("G:/Unidades compartidas/Maestría en Inteligencia Analítica de Datos/Cursos/Modelos de análisis estadísticos/Examen/Datos/wine.csv")
+
+
+#Convertir quality a binaria
+wine$quality<-ifelse(wine$quality>=9,1,0)
+
+wine <- wine[complete.cases(wine),]
+wine$type <- as.factor(wine$type)
+wine$quality <- as.factor(wine$quality)
+
+formula_0=quality ~ fixed.acidity+volatile.acidity+citric.acid+residual.sugar+
+  chlorides+free.sulfur.dioxide+total.sulfur.dioxide+density+
+  pH+sulphates+alcohol+type
+
+modelo_0 <- glm(formula_0, data=wine, family= binomial(logit))
+modelopred_0 <-round(predict(modelo_0,type="response"))
+
+```
+
+Debido a la muestra tan baja de vinos de puntuación entre 9 y 10 (n = 5) al tratar de realizar el modelo de clasificación con el nivel de calidad deseado por el cliente, no se logró estimar predicción alguna como se observa en en la matriz de confusión siguiente: 
+
+```{r confusion1}
+confusionMatrix(as.factor(modelopred_0),wine$quality)
+```
+
+Y cómo lo confirma el valor de área bajo la curva 
+
+```{r auc1}
+Roc1 <- roc(wine$quality, modelopred_0)
+Roc1
+```
+
+Luego de varías interaciones, se decide realizar el modelo utilizando el valor de calidad de mayor o igual a 6, para realizar el modelo de clasificación. 
+
+```{r setup4, include=FALSE}
+
+wine <- read_csv("G:/Unidades compartidas/Maestría en Inteligencia Analítica de Datos/Cursos/Modelos de análisis estadísticos/Examen/Datos/wine.csv")
+
+
+#Convertir quality a binaria
+wine$quality<-ifelse(wine$quality>=6,1,0)
+
+wine <- wine[complete.cases(wine),]
+wine$type <- as.factor(wine$type)
+wine$quality <- as.factor(wine$quality)
+
+formula_0=quality ~ fixed.acidity+volatile.acidity+citric.acid+residual.sugar+
+  chlorides+free.sulfur.dioxide+total.sulfur.dioxide+density+
+  pH+sulphates+alcohol+type
+
+modelo_0 <- glm(formula_0, data=wine, family= binomial(logit))
+modelopred_0 <-round(predict(modelo_0,type="response"))
+
+```
+
+### Resumen del modelo 
+
+```{r resumen modelo}
+summary(modelo_0)
+```
+
+En el resumen se puede observar que la variance nula, es decir, solo tomando el intercepto del modelo tienen un valor de 8541.0 y al introducir la variables, esta variación baja a 6693.0. 
+
+### Anova
+```{r anova1}
+anova(modelo_0, test="Chisq")
+```
+Al analizar el anova del modelo podemos observar como aporta cada variable a reducir la varianza residual del modelo. Los mayores cambios se observan cuando se introducen las variables _volatile.acidity_, _total.sulfur.dioxide_, _density_, _pH_, _sulphates_ y _acohol_
+
+Debido a esto se decide simplificar el modelo incluyendo solo estas variables 
+
+```{r setup5, include=FALSE}
+
+wine <- read_csv("G:/Unidades compartidas/Maestría en Inteligencia Analítica de Datos/Cursos/Modelos de análisis estadísticos/Examen/Datos/wine.csv")
+
+
+#Convertir quality a binaria
+wine$quality<-ifelse(wine$quality>=6,1,0)
+
+wine <- wine[complete.cases(wine),]
+wine$type <- as.factor(wine$type)
+wine$quality <- as.factor(wine$quality)
+str(wine)
+summary(wine)
+
+
+#Modelo0
+
+formula_0=quality ~ volatile.acidity+total.sulfur.dioxide+density+
+  pH+sulphates+alcohol
+
+modelo_0 <- glm(formula_0, data=wine, family= binomial(logit))
+modelopred_0 <-round(predict(modelo_0,type="response"))
+
+```
+
+### Modelo simplificado
+```{r resumen modelo2}
+summary(modelo_0)
+```
+
+### Anova modelo simplificado
+```{r anova2}
+anova(modelo_0, test="Chisq")
+```
+
+### Matriz de confusión
+```{r confusion2}
+confusionMatrix(as.factor(modelopred_0),wine$quality)
+```
+El modelo resultante tiene una baja sensibilidad (capacidad para detectar calidades mayores o iguales 6) pero alta especificidad (capacidad para detectar vinos con calidades menores a 6 )
+
+### Área bajo la curva 
+
+```{r roc}
+Roc1 <- roc(wine$quality, modelopred_0)
+Roc1
+```
+
+### Gráfico Roc
+
+
+```{r , echo=FALSE}
+plot.roc(Roc1)
+```
+
+
+
+
+
+
+
